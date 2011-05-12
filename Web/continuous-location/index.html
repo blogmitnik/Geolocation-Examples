@@ -53,6 +53,7 @@
 			
 			// Make a request to the browser's geolocation API to find the actual location
 			if(navigator.geolocation) {
+				logMsg("Getting location");
 				navigator.geolocation.getCurrentPosition(
 					function(position){
 						// Sometimes firefox returns duplicate results. If we've already found them, skip this.
@@ -67,9 +68,21 @@
 						locationMarker = addMarker(p, "Initial Position");
 	 
 					},
-					function( error ){
+					function(error){
 						// Some error, either a timeout, or permission denied.
-						logMsg("Something went wrong: " + error);
+						var errorMsg;
+						switch(error.code) {
+							case error.PERMISSION_DENIED:
+								errorMsg = "Permission Denied";
+								break;
+							case error.POSITION_UNAVAILABLE:
+								errorMsg = "Position Unavailable";
+								break;
+							case error.TIMEOUT:
+								errorMsg = "Timeout Getting Location";
+								break;
+						}
+						logMsg("Error: " + errorMsg);
 					},
 					{
 						timeout: (5 * 1000),  // Don't wait more than 5 seconds for a location

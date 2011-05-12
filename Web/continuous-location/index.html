@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Retrieving a Single Location Using the Browser's Geolocation API</title>
+	<style type="text/css">
+		html {
+			height: 100%;
+		}
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0px 0px 0px 0px;
+			margin: 0px 0px 0px 0px;
+		}
+		#map {
+			height: 100%;
+			width: 100%;
+		}
+		#logContainer {
+			position: absolute;
+			width: 270px;
+			height: 60px;
+			right: 10px;
+			bottom: 20px;
+		}
+		#log {
+			width: 270px;
+			height: 60px;
+		}
+	</style>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+</head>
+<body>
+
+	<div id="map"><!-- The google map will be placed here --></div>
+	<div id="logContainer"><textarea id="log"></textarea></div>
+
+	<script type="text/javascript">
+		var defaultLocation = new google.maps.LatLng(47.613, -122.333);
+		var map;
+		var locationMarker;  // The marker that will be used to show the user's location
+		
+ 		$(function(){
+ 			// First initialize the Google map centered to some default location
+			map = new google.maps.Map(document.getElementById("map"), {
+				zoom: 12,
+				center: defaultLocation,
+				mapTypeId: google.maps.MapTypeId.ROADMAP
+			});
+			
+			logMsg("Setting up map");
+			
+			// Make a request to the browser's geolocation API to find the actual location
+			if(navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(
+					function(position){
+						// Sometimes firefox returns duplicate results. If we've already found them, skip this.
+						if(locationMarker) {
+							return;
+						}
+	 
+						logMsg("First position found");
+	 
+						// Add a marker to the map using the position.
+						var p = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+						locationMarker = addMarker(p, "Initial Position");
+	 
+					},
+					function( error ){
+						// Some error, either a timeout, or permission denied.
+						logMsg("Something went wrong: " + error);
+					},
+					{
+						timeout: (5 * 1000),  // Don't wait more than 5 seconds for a location
+						maximumAge: (1000 * 60 * 15),  // Don't return the location if it's more than 15 minutes old
+						enableHighAccuracy: true  // Not supported by all browsers yet
+					}
+				);
+				
+				// Now watch for updates. The location can change either because the user moved physically, or because a better location fix was found.
+				// This acts like setInterval, where a resources is returned that can be used to stop watching the location.
+				var positionWatcher = navigator.geolocation.watchPosition(
+					function(position) {
+						logMsg("Newer Position Found");
+
+						moveMarker(
+							locationMarker,
+							new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+							"Updated Position"
+						);
+					}
+				);
+				
+			} else {
+				// The browser doesn't support geolocation. Fall back to an alternate method such as IP-based lookup or manual entry.
+			}
+  		});
+ 
+		function addMarker(position, label) {
+			return new google.maps.Marker({
+				map: map,
+				position: position,
+				title: (label || "")
+			});
+		}
+ 
+		function moveMarker(marker, position, label) {
+			marker.setPosition(position);
+ 
+			if(label) {
+				marker.setTitle( label );
+			}
+		}
+		
+		function logMsg(msg) {
+			$("#log").prepend(msg + "\n");
+		}
+	</script>
+ 
+</body>
+</html>

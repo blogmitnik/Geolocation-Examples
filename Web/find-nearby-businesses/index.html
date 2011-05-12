@@ -11,6 +11,9 @@
 			height: 100%;
 			padding: 0px 0px 0px 0px;
 			margin: 0px 0px 0px 0px;
+			overflow: hidden;
+			font-family: verdana, arial, sans-serif;
+			font-size: 10pt;
 		}
 		#map {
 			height: 100%;
@@ -27,6 +30,28 @@
 			width: 270px;
 			height: 60px;
 		}
+		#nearbyResults {
+			position: absolute;
+			width: 270px;
+			top: 10px;
+			left: 10px;
+			background: white;
+			border: 1px #ccc solid;
+			overflow-y: scroll;
+		}
+		#nearbyResults .inside {
+			padding: 5px;
+		}
+		#nearbyResults .result {
+			margin-bottom: 5px;
+		}
+		#nearbyResults .name {
+		}
+		#nearbyResults .address {
+			font-size: 8pt;
+			color: #666;
+			padding-left: 10px;
+		}
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
 	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
@@ -36,29 +61,36 @@
 
 	<div id="map"><!-- The google map will be placed here --></div>
 	<div id="logContainer"><textarea id="log"></textarea></div>
-	<div id="nearby"></div>
+	<div id="nearbyResults"><div class="inside"></div></div>
 
 	<script type="text/javascript">
 		var map;
 		var locationMarker;  // The marker that will be used to show the user's location
-		var simpleGeo = new simplegeo.PlacesClient('PcdauwgCxppheLRPkWCGAYGB7jWCLHXG');  // SimpleGeo Places client
+		var sgClient = new simplegeo.PlacesClient('PcdauwgCxppheLRPkWCGAYGB7jWCLHXG');  // SimpleGeo Places client
 		
  		$(function(){
  			// First initialize the Google map centered to some default location
 			map = new google.maps.Map(document.getElementById("map"), {
 				zoom: 12,
-				mapTypeId: google.maps.MapTypeId.ROADMAP
+				mapTypeId: google.maps.MapTypeId.ROADMAP,
+				panControl: false,
+				zoomControlOptions: {
+					position: google.maps.ControlPosition.RIGHT_TOP
+				}
 			});
+			
+			$(window).resize(resizeInterface);
+			resizeInterface();
 			
 			logMsg("Setting up map");
 
 			// Use the SimpleGeo Places API to get the user's location
-			simpleGeo.getLocationFromIP(function(err, position) {
+			sgClient.getLocationFromIP(function(err, position) {
 				if(err == null) {
 					logMsg("Got location from IP address");
 				    centerMap(err, position);
 			    }
-			    simpleGeo.getLocationFromBrowser({
+			    sgClient.getLocationFromBrowser({
 					timeout: (10 * 1000),  // Don't wait more than 5 seconds for a location
 					maximumAge: (1000 * 60 * 15),  // Don't return the location if it's more than 15 minutes old
 					enableHighAccuracy: true  // Not supported by all browsers yet
@@ -104,12 +136,44 @@
 		}
 		
 		function findNearbyBusinesses(lat, lng) {
-			client.search(lat, lng, {
+			sgClient.search(lat, lng, {
 				radius: 30
 			}, function(err, data) {
-				console.debug(data);
 				logMsg("Found " + data.features.length + " places");
+				var bounds = new google.maps.LatLngBounds();
+				for(var i in data.features) {
+					p = data.features[i];
+					if(p.geometry.type == "Point") {
+						var placePosition = new google.maps.LatLng(p.geometry.coordinates[1], p.geometry.coordinates[0]);
+						
+						// Extend the map bounds to encompass this point
+						bounds.extend(placePosition);
+						
+						// Place a marker on the map
+						var placeMarker = new google.maps.Marker({
+							map: map,
+							position: placePosition,
+							title: p.properties.name || p.properties.address
+						});
+						
+						// Add the result to the sidebar
+						$("#nearbyResults .inside").append(buildResultHTML(p));
+					}
+				}
+				map.fitBounds(bounds);
 			});
+		}
+		
+		function buildResultHTML(place) {
+			return '<div class="result">'
+					+ '<div class="name"><a href="javascript:centerOnPoint(' + p.geometry.coordinates[1] + ', ' + p.geometry.coordinates[0] + ');">' + p.properties.name + '</a></div>'
+					+ '<div class="address">' + p.properties.address + '</div>'
+				+ '</div>';
+		}
+		
+		function centerOnPoint(lat, lng) {
+			var p = new google.maps.LatLng(lat, lng);
+	        map.setCenter(p);
 		}
 		
 		function handleGeolocationError(error) {
@@ -131,6 +195,10 @@
 		
 		function logMsg(msg) {
 			$("#log").prepend(msg + "\n");
+		}
+		
+		function resizeInterface() {
+			$("#nearbyResults").css("height", ($(window).height() - 20) + "px");
 		}
 	</script>
  

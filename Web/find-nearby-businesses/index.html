@@ -55,7 +55,7 @@
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
 	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
-	<script type="text/javascript" src="http://cdn.simplegeo.com/js/1.3/simplegeo.places.min.js"></script>
+	<script type="text/javascript" src="http://cdn.simplegeo.com/js/1.3/simplegeo.places.jq.min.js"></script>
 </head>
 <body>
 
@@ -90,6 +90,7 @@
 					logMsg("Got location from IP address");
 				    centerMap(err, position);
 			    }
+			    logMsg("Waiting for browser location...");
 			    sgClient.getLocationFromBrowser({
 					timeout: (10 * 1000),  // Don't wait more than 5 seconds for a location
 					maximumAge: (1000 * 60 * 15),  // Don't return the location if it's more than 15 minutes old

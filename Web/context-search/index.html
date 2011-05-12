@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>SimpleGeo Context Search</title>
+	<style type="text/css">
+		html {
+			height: 100%;
+		}
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0px 0px 0px 0px;
+			margin: 0px 0px 0px 0px;
+			overflow: hidden;
+			font-family: verdana, arial, sans-serif;
+			font-size: 10pt;
+		}
+		#map {
+			height: 100%;
+			width: 100%;
+		}
+		#logContainer {
+			position: absolute;
+			width: 270px;
+			height: 60px;
+			right: 10px;
+			bottom: 20px;
+		}
+		#log {
+			width: 270px;
+			height: 60px;
+		}
+		#context {
+			position: absolute;
+			margin: 0 auto;
+			width: 300px;
+			top: 10px;
+			background: white;
+			border: 1px #ccc solid;
+		}
+		#context .loading {
+			padding: 5px;
+			text-align: center;
+		}
+		#context .inside {
+			display: none;
+			padding: 5px;
+			text-align: center;
+		}
+		#context .label {
+			color: #666;
+		}
+		#context #city_name {
+			text-align: center;
+			font-size: 12pt;
+			font-weight: bold;
+		}
+		#weather {
+			margin-top: 5px;
+			color: #666;
+		}
+	</style>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+	<script type="text/javascript" src="http://cdn.simplegeo.com/js/1.3/simplegeo.context.jq.min.js"></script>
+</head>
+<body>
+
+	<div id="map"><!-- The google map will be placed here --></div>
+	<div id="logContainer"><textarea id="log"></textarea></div>
+	<div id="context">
+		<div class="inside">
+			<div id="city_name"></div>
+			<div id="intersection">
+				<span id="intersection_name"></span>
+			</div>
+			<div id="weather">
+				<span id="weather_temperature"></span>
+				<span id="weather_conditions"></span>
+			</div>
+		</div>
+		<div class="loading">
+			<img src="loading.gif" />
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var map;
+		var locationMarker;  // The marker that will be used to show the user's location
+		var sgClient = new simplegeo.ContextClient('PcdauwgCxppheLRPkWCGAYGB7jWCLHXG');  // SimpleGeo Places client
+		
+ 		$(function(){
+ 			// First initialize the Google map centered to some default location
+			map = new google.maps.Map(document.getElementById("map"), {
+				zoom: 15,
+				mapTypeId: google.maps.MapTypeId.ROADMAP,
+				panControl: false,
+				zoomControlOptions: {
+					position: google.maps.ControlPosition.RIGHT_TOP
+				}
+			});
+
+			$(window).resize(resizeInterface);
+			resizeInterface();
+			
+			logMsg("Setting up map");
+
+			// Use the SimpleGeo Places API to get the user's location
+			sgClient.getLocationFromIP(function(err, position) {
+				if(err == null) {
+					logMsg("Got location from IP address");
+				    centerMap(err, position);
+			    }
+			    logMsg("Waiting for browser location...");
+			    sgClient.getLocationFromBrowser({
+					timeout: (10 * 1000),  // Don't wait more than 5 seconds for a location
+					maximumAge: (1000 * 60 * 15),  // Don't return the location if it's more than 15 minutes old
+					enableHighAccuracy: true  // Not supported by all browsers yet
+				},
+				function(err, position) {
+					if(err == null) {
+						logMsg("Got location from browser");
+				        centerMap(err, position);
+				        getSGContext(position.coords.latitude, position.coords.longitude);
+				    } else {
+				    	handleGeolocationError(err);
+				    }
+			    });
+			});
+			
+			function centerMap(err, position) {
+			    if (err) {
+			        // Handle error
+			    } else {
+			        // center your map with position.coords
+					var p = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			        map.setCenter(p);
+			        
+			        if(position.source) {
+			        	source = position.source;
+			        } else {
+			        	source = "Browser";
+			        }
+			        
+					locationMarker = addMarker(p, source);
+					
+					// findNearbyBusinesses(position.coords.latitude, position.coords.longitude);
+			    }
+			}
+  		});
+ 
+		function addMarker(position, label) {
+			return new google.maps.Marker({
+				map: map,
+				position: position,
+				title: (label || "")
+			});
+		}
+		
+		function getSGContext(lat, lng) {
+			sgClient.getContext(lat, lng, function(err, data) {
+				$("#context .loading").hide();
+				logMsg("Loaded context from SimpleGeo");
+				
+				if(data.address && data.address.properties) {
+					var p = data.address.properties;
+					if(p.city && p.province) {
+						$("#city_name").html(p.city + ", " + p.province);
+					} else if(p.city) {
+						$("#city_name").html(p.city);
+					}
+				}
+				
+				if(data.weather) {
+					if(data.weather.temperature) {
+						$("#weather_temperature").html(data.weather.temperature);
+					}
+					if(data.weather.conditions) {
+						$("#weather_conditions").html(data.weather.conditions);
+					}
+				}
+				
+				if(data.intersections) {
+					var ix = data.intersections[0];
+					if(ix.properties.highways && ix.properties.highways.length >= 2) {
+						var h = ix.properties.highways;
+						$("#intersection_name").html(h[0].name + " &amp; " + h[1].name);
+					}
+				}
+
+				$("#context .inside").show();
+			});
+		}
+		
+		function handleGeolocationError(error) {
+			// Some error, either a timeout, or permission denied.
+			var errorMsg;
+			switch(error.code) {
+				case error.PERMISSION_DENIED:
+					errorMsg = "Permission Denied";
+					break;
+				case error.POSITION_UNAVAILABLE:
+					errorMsg = "Position Unavailable";
+					break;
+				case error.TIMEOUT:
+					errorMsg = "Timeout Getting Location";
+					break;
+			}
+			logMsg("Error: " + errorMsg);
+		}
+		
+		function logMsg(msg) {
+			$("#log").prepend(msg + "\n");
+		}
+
+		function resizeInterface() {
+			$("#context").css("left", Math.round($(window).width()/2 - ($("#context").width()/2)) + "px");
+		}
+	</script>
+ 
+</body>
+</html>

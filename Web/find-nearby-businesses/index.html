@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Finding Nearby Businesses with SimpleGeo</title>
+	<style type="text/css">
+		html {
+			height: 100%;
+		}
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0px 0px 0px 0px;
+			margin: 0px 0px 0px 0px;
+		}
+		#map {
+			height: 100%;
+			width: 100%;
+		}
+		#logContainer {
+			position: absolute;
+			width: 270px;
+			height: 60px;
+			right: 10px;
+			bottom: 20px;
+		}
+		#log {
+			width: 270px;
+			height: 60px;
+		}
+	</style>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+	<script type="text/javascript" src="http://cdn.simplegeo.com/js/1.3/simplegeo.places.min.js"></script>
+</head>
+<body>
+
+	<div id="map"><!-- The google map will be placed here --></div>
+	<div id="logContainer"><textarea id="log"></textarea></div>
+	<div id="nearby"></div>
+
+	<script type="text/javascript">
+		var map;
+		var locationMarker;  // The marker that will be used to show the user's location
+		var simpleGeo = new simplegeo.PlacesClient('PcdauwgCxppheLRPkWCGAYGB7jWCLHXG');  // SimpleGeo Places client
+		
+ 		$(function(){
+ 			// First initialize the Google map centered to some default location
+			map = new google.maps.Map(document.getElementById("map"), {
+				zoom: 12,
+				mapTypeId: google.maps.MapTypeId.ROADMAP
+			});
+			
+			logMsg("Setting up map");
+
+			// Use the SimpleGeo Places API to get the user's location
+			simpleGeo.getLocationFromIP(function(err, position) {
+				if(err == null) {
+					logMsg("Got location from IP address");
+				    centerMap(err, position);
+			    }
+			    simpleGeo.getLocationFromBrowser({
+					timeout: (10 * 1000),  // Don't wait more than 5 seconds for a location
+					maximumAge: (1000 * 60 * 15),  // Don't return the location if it's more than 15 minutes old
+					enableHighAccuracy: true  // Not supported by all browsers yet
+				},
+				function(err, position) {
+					if(err == null) {
+						logMsg("Got location from browser");
+				        centerMap(err, position);
+				        findNearbyBusinesses(position.coords.latitude, position.coords.longitude);
+				    } else {
+				    	handleGeolocationError(err);
+				    }
+			    });
+			});
+			
+			function centerMap(err, position) {
+			    if (err) {
+			        // Handle error
+			    } else {
+			        // center your map with position.coords
+					var p = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			        map.setCenter(p);
+			        
+			        if(position.source) {
+			        	source = position.source;
+			        } else {
+			        	source = "Browser";
+			        }
+			        
+					locationMarker = addMarker(p, source);
+					
+					// findNearbyBusinesses(position.coords.latitude, position.coords.longitude);
+			    }
+			}
+  		});
+ 
+		function addMarker(position, label) {
+			return new google.maps.Marker({
+				map: map,
+				position: position,
+				title: (label || "")
+			});
+		}
+		
+		function findNearbyBusinesses(lat, lng) {
+			client.search(lat, lng, {
+				radius: 30
+			}, function(err, data) {
+				console.debug(data);
+				logMsg("Found " + data.features.length + " places");
+			});
+		}
+		
+		function handleGeolocationError(error) {
+			// Some error, either a timeout, or permission denied.
+			var errorMsg;
+			switch(error.code) {
+				case error.PERMISSION_DENIED:
+					errorMsg = "Permission Denied";
+					break;
+				case error.POSITION_UNAVAILABLE:
+					errorMsg = "Position Unavailable";
+					break;
+				case error.TIMEOUT:
+					errorMsg = "Timeout Getting Location";
+					break;
+			}
+			logMsg("Error: " + errorMsg);
+		}
+		
+		function logMsg(msg) {
+			$("#log").prepend(msg + "\n");
+		}
+	</script>
+ 
+</body>
+</html>

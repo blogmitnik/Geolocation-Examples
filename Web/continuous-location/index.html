@@ -97,11 +97,18 @@
 					function(position) {
 						logMsg("Newer Position Found");
 
-						moveMarker(
-							locationMarker,
-							new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
-							"Updated Position"
-						);
+						if(!locationMarker) {
+							addMarker(
+								new google.maps.LatLng(position.coords.latitude, position.coords.longitude), 
+								"Updated Position"
+							);
+						} else {
+							moveMarker(
+								locationMarker,
+								new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+								"Updated Position"
+							);
+						}
 					}
 				);
 				

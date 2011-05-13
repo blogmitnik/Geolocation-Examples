@@ -1,0 +1,41 @@
+<html>
+<head>
+<title>Geoloqi Hybrid App Example</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+<script type="text/javascript">
+	$(function(){
+		$("#geoloqi-subscribe-btn").click(function(){
+			$("#status").html("subscribed");
+			// Redirect the browser to this "fake" URL which will be intercepted by the Geoloqi app.
+			// The app will prevent the window from actually redirecting to this non-existent URL.
+			window.location = "geoloqi-app:layer:subscribed";
+		});
+		$("#geoloqi-unsubscribe-btn").click(function(){
+			$("#status").html("unsubscribed");
+			window.location = "geoloqi-app:layer:unsubscribed";
+		});
+		$("#start-hires").click(function(){
+			$("#status").html("tracking!");
+			window.location = "geoloqi-app:tracker:hires";
+		});
+	});
+
+	// This function is called by the Geoloqi app when the user hits the "on" switch
+	function geoloqi_userDidSubscribeToLayer(layerID) {
+		$("#status").html("from app: " + layerID);
+		alert("Hi");
+	}
+</script>
+</head>
+<body>
+
+<input type="button" value="Subscribe" id="geoloqi-subscribe-btn" />
+
+<input type="button" value="Unsubscribe" id="geoloqi-unsubscribe-btn" />
+
+<input type="button" value="Start Tracking Hi-Res" id="start-hires" />
+
+<div id="status">...</div>
+
+</body>
+</html>

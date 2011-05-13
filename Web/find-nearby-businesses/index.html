@@ -145,7 +145,8 @@
 				for(var i in data.features) {
 					p = data.features[i];
 					if(p.geometry.type == "Point") {
-						var placePosition = new google.maps.LatLng(p.geometry.coordinates[1], p.geometry.coordinates[0]);
+						var placePosition = new google.maps.LatLng(
+							p.geometry.coordinates[1], p.geometry.coordinates[0]);
 						
 						// Extend the map bounds to encompass this point
 						bounds.extend(placePosition);

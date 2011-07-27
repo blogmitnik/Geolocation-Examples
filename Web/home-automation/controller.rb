@@ -12,8 +12,8 @@ require 'x10/cm17a'
 class Controller < Sinatra::Base
 
   before do
-  	@redirect_uri = request.scheme + '://' + request.host_with_port + '/oauth'
-  	@trigger_uri = request.scheme + '://' + request.host_with_port + '/trigger'
+    @redirect_uri = request.scheme + '://' + request.host_with_port + '/oauth'
+    @trigger_uri = request.scheme + '://' + request.host_with_port + '/trigger'
     redirect geoloqi.authorize_url(@redirect_uri) unless geoloqi.access_token?
   end
 
@@ -93,7 +93,6 @@ class Controller < Sinatra::Base
     lamp = X10.device('a1')  # Create an X10 device at address 'a1'
     
     case body.place.name
-
       when "Home"
         if(body.triggered_on == "enter")
           # Turn the device on when getting home
